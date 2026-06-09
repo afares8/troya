@@ -710,7 +710,9 @@ def repl(config: dict) -> None:
 
             elif cmd == "voice":
                 if not check_ffmpeg():
-                    print_error("ffmpeg not found. Install it to use voice features.")
+                    print_error("ffmpeg not found")
+                    print_info("Install: brew install ffmpeg  (macOS)")
+                    print_info("        sudo apt install ffmpeg  (Linux)")
                     continue
                 print_header("🎤 Voice Mode")
                 print_info("Voice recording requires interactive mode.")
@@ -721,7 +723,9 @@ def repl(config: dict) -> None:
                     print_info("Example: /browser https://example.com")
                     continue
                 if not check_playwright():
-                    print_error("Playwright not installed. Run: pip install playwright")
+                    print_error("playwright not installed")
+                    print_info("Install: pip install playwright")
+                    print_info("        playwright install")
                     continue
                 print_header("🌐 Browser Mode")
                 try:
@@ -740,6 +744,9 @@ def repl(config: dict) -> None:
                     index = EmbeddingIndex(context.cwd)
                     index.build()
                     print_success("Embeddings index built")
+                except ImportError:
+                    print_error("sentence-transformers not installed")
+                    print_info("Install: pip install sentence-transformers")
                 except Exception as e:
                     print_error(f"Failed to build embeddings: {e}")
 
@@ -809,17 +816,21 @@ def repl(config: dict) -> None:
                 if not arg:
                     print_error("Usage: /rag <query>")
                     continue
-                idx = EmbeddingIndex(context.cwd)
-                if not idx.loaded:
-                    print_info("No embeddings found. Building index first...")
-                    idx.build(max_files=100)
-                results = idx.search(arg, top_k=5)
-                if results:
-                    print(f"{Colors.CYAN}Semantic search results:{Colors.RESET}")
-                    for path, score in results:
-                        print(f"  {Colors.YELLOW}{path}{Colors.RESET} (score: {score:.3f})")
-                else:
-                    print_info("No results found. Try building index with /embed first.")
+                try:
+                    idx = EmbeddingIndex(context.cwd)
+                    if not idx.loaded:
+                        print_info("No embeddings found. Building index first...")
+                        idx.build(max_files=100)
+                    results = idx.search(arg, top_k=5)
+                    if results:
+                        print(f"{Colors.CYAN}Semantic search results:{Colors.RESET}")
+                        for path, score in results:
+                            print(f"  {Colors.YELLOW}{path}{Colors.RESET} (score: {score:.3f})")
+                    else:
+                        print_info("No results found. Try building index with /embed first.")
+                except ImportError:
+                    print_error("sentence-transformers not installed")
+                    print_info("Install: pip install sentence-transformers")
 
             elif cmd == "finetune":
                 print_header("🧠 Fine-Tuning Preparation")
@@ -1114,7 +1125,11 @@ def repl(config: dict) -> None:
                     print_error("Usage: /research <topic>")
                     print_info("Example: /research 'FastAPI JWT best practices'")
                     continue
-                print(research_topic(arg))
+                try:
+                    print(research_topic(arg))
+                except Exception as e:
+                    print_error(f"Research failed: {e}")
+                    print_info("Requires internet connection and requests/bs4")
 
             elif cmd == "github":
                 if not arg:
@@ -1129,6 +1144,9 @@ def repl(config: dict) -> None:
                             print_error("Not in a GitHub repo")
                     else:
                         print_error("GitHub CLI (gh) not installed or not authenticated")
+                        print_info("Install: brew install gh  (macOS)")
+                        print_info("        https://cli.github.com  (other)")
+                        print_info("Then: gh auth login")
                     continue
                 parts = arg.split(maxsplit=1)
                 subcmd = parts[0]
