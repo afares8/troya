@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cascade Web IDE</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<style>
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;--fg:#c9d1d9;--accent:#58a6ff;--accent2:#238636;--danger:#da3633;--warn:#d29922;--font:13px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font:var(--font);background:var(--bg);color:var(--fg);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+#toolbar{height:40px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+#toolbar h1{font-size:13px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px;}
+#toolbar .btn{background:var(--bg3);border:1px solid var(--border);color:var(--fg);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;transition:.15s;}
+#toolbar .btn:hover{background:var(--border);}
+#toolbar .btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+#toolbar .btn.primary:hover{opacity:.9;}
+#toolbar .spacer{flex:1;}
+#toolbar .status{font-size:11px;color:var(--fg);opacity:.6;}
+#main{flex:1;display:flex;overflow:hidden;}
+#sidebar{width:240px;min-width:180px;max-width:400px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#sidebar-header{padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg);opacity:.5;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+#file-tree{flex:1;overflow:auto;padding:4px 0;}
+.file-entry{display:flex;align-items:center;padding:4px 12px;cursor:pointer;font-size:12px;gap:6px;white-space:nowrap;}
+.file-entry:hover{background:var(--bg3);}
+.file-entry.active{background:var(--accent);color:#fff;}
+.file-entry .icon{width:14px;text-align:center;opacity:.7;}
+.file-entry .name{flex:1;overflow:hidden;text-overflow:ellipsis;}
+.file-entry .size{font-size:10px;opacity:.4;}
+#center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:300px;}
+#tabs{height:32px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;overflow-x:auto;}
+.tab{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px 6px 0 0;font-size:12px;cursor:pointer;border:1px solid transparent;border-bottom:none;white-space:nowrap;}
+.tab:hover{background:var(--bg3);}
+.tab.active{background:var(--bg);border-color:var(--border);border-bottom:1px solid var(--bg);margin-bottom:-1px;}
+.tab .close{width:14px;height:14px;display:flex;align-items:center;justify-content:center;border-radius:3px;opacity:0;}
+.tab:hover .close{opacity:.5;}
+.tab .close:hover{opacity:1;background:var(--danger);color:#fff;}
+#editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#code-editor{flex:1;display:none;flex-direction:column;overflow:hidden;}
+#code-editor.active{display:flex;}
+#editor-info{height:24px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:11px;gap:12px;}
+#editor-info span{opacity:.5;}
+#editor-textarea{width:100%;flex:1;background:var(--bg);color:var(--fg);border:none;outline:none;padding:12px;font:13px/1.5 ui-monospace,SFMono-Regular,monospace;resize:none;tab-size:2;}
+#chat-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#chat-messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px;}
+.message{max-width:100%;}
+.message .meta{font-size:11px;opacity:.4;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.message .content{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;line-height:1.6;overflow-x:auto;}
+.message.user .content{background:var(--bg3);}
+.message.assistant .content{background:var(--bg2);}
+.message pre{background:#000;border-radius:6px;padding:12px;overflow-x:auto;margin:8px 0;}
+.message code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;}
+.message p{margin:8px 0;}
+.message ul{margin:8px 0 8px 20px;}
+#chat-input-area{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;}
+#chat-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--fg);padding:10px 12px;font:inherit;outline:none;resize:none;min-height:40px;max-height:120px;}
+#chat-input:focus{border-color:var(--accent);}
+#send-btn{background:var(--accent2);border:none;color:#fff;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;}
+#send-btn:hover{opacity:.9;}
+#send-btn:disabled{opacity:.4;cursor:not-allowed;}
+#terminal{height:160px;min-height:80px;max-height:400px;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#terminal-header{height:28px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:11px;gap:8px;}
+#terminal-header .title{font-weight:700;}
+#terminal-output{flex:1;overflow:auto;padding:8px 12px;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;}
+#terminal-input-area{display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--border);}
+#terminal-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 8px;font:inherit;outline:none;}
+#terminal-run{background:var(--bg3);border:1px solid var(--border);color:var(--fg);padding:6px 10px;border-radius:4px;cursor:pointer;font-size:11px;}
+#terminal-run:hover{background:var(--border);}
+#right{width:320px;min-width:260px;max-width:500px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#right-header{padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg);opacity:.5;font-weight:700;border-bottom:1px solid var(--border);}
+#config-panel{padding:12px;display:flex;flex-direction:column;gap:10px;}
+#config-panel label{font-size:11px;opacity:.6;}
+#config-panel input,#config-panel select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);padding:6px 8px;font:inherit;outline:none;}
+#config-panel input:focus,#config-panel select:focus{border-color:var(--accent);}
+.resizer{width:4px;cursor:col-resize;background:transparent;position:relative;}
+.resizer:hover{background:var(--accent);}
+.row-resizer{height:4px;cursor:row-resize;background:transparent;position:relative;}
+.row-resizer:hover{background:var(--accent);}
+.loading-dot{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;animation:blink 1s infinite;margin-left:4px;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:#484f58;}
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+<div id="toolbar">
+<h1>🚀 Cascade Web IDE</h1>
+<button class="btn" onclick="newFile()">New File</button>
+<button class="btn" onclick="saveFile()">Save</button>
+<button class="btn primary" onclick="clearChat()">Clear Chat</button>
+<div class="spacer"></div>
+<span class="status" id="status-text">Ready</span>
+</div>
+<div id="main">
+<div id="sidebar">
+<div id="sidebar-header"><span>Explorer</span><span onclick="loadFiles()" style="cursor:pointer">↻</span></div>
+<div id="file-tree"></div>
+</div>
+<div class="resizer" id="sidebar-resizer"></div>
+<div id="center">
+<div id="tabs"></div>
+<div id="editor-area">
+<div id="code-editor" class="active">
+<div id="editor-info"><span id="editor-path">No file open</span><span id="editor-lang"></span></div>
+<textarea id="editor-textarea" placeholder="Select a file to edit..." spellcheck="false"></textarea>
+</div>
+<div id="chat-panel" class="hidden">
+<div id="chat-messages"></div>
+<div id="chat-input-area">
+<textarea id="chat-input" rows="1" placeholder="Ask Cascade... (Shift+Enter for new line)"></textarea>
+<button id="send-btn" onclick="sendChat()">Send</button>
+</div>
+</div>
+</div>
+<div class="row-resizer" id="editor-resizer"></div>
+<div id="terminal">
+<div id="terminal-header"><span class="title">Terminal</span><span style="opacity:.4">⌘+K to clear</span></div>
+<div id="terminal-output"></div>
+<div id="terminal-input-area">
+<input id="terminal-input" placeholder="Type command and press Enter...">
+<button id="terminal-run" onclick="runTerminal()">Run</button>
+</div>
+</div>
+</div>
+<div class="resizer" id="right-resizer"></div>
+<div id="right">
+<div id="right-header">Configuration</div>
+<div id="config-panel">
+<label>Provider</label>
+<select id="cfg-provider"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="groq">Groq</option><option value="ollama">Ollama</option><option value="custom">Custom</option></select>
+<label>Model</label>
+<input id="cfg-model" value="gpt-4o">
+<label>API Key</label>
+<input id="cfg-apikey" type="password" placeholder="sk-...">
+<label>API Base (optional)</label>
+<input id="cfg-apibase" placeholder="http://localhost:11434/v1">
+<label>Temperature</label>
+<input id="cfg-temp" value="0.7" type="number" step="0.1" min="0" max="2">
+<button class="btn primary" onclick="testConnection()" style="margin-top:4px">Test Connection</button>
+</div>
+</div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

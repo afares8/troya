@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cascade Multi-Agent System</title>
+<style>
+:root{--bg:#0a0e1a;--bg2:#111827;--bg3:#1f2937;--border:#374151;--fg:#e5e7eb;--accent:#3b82f6;--accent2:#10b981;--warn:#f59e0b;--danger:#ef4444;--font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font:var(--font);background:var(--bg);color:var(--fg);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+header{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+header .badge{background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:12px;}
+main{flex:1;display:flex;overflow:hidden;}
+#left{width:300px;min-width:240px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.panel-header{padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg);opacity:.5;font-weight:700;border-bottom:1px solid var(--border);}
+#stats{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
+.stat .value{font-size:20px;font-weight:700;color:var(--accent);}
+.stat .label{font-size:10px;opacity:.6;margin-top:2px;}
+#agents-list{flex:1;overflow:auto;padding:8px;}
+.agent-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.agent-card .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--accent);}
+.agent-card .info{flex:1;}
+.agent-card .name{font-weight:600;font-size:13px;}
+.agent-card .role{font-size:11px;opacity:.5;}
+.agent-card .status{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg);}
+.agent-card .status.working{background:var(--warn);color:#000;}
+#center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:300px;}
+#tasks-panel{flex:1;overflow:auto;padding:14px;}
+.task{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;}
+.task .header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.task .id{font-size:10px;opacity:.4;background:var(--bg3);padding:2px 6px;border-radius:4px;}
+.task .title{font-weight:600;flex:1;}
+.task .status{font-size:10px;padding:2px 8px;border-radius:4px;}
+.task .status.pending{background:var(--warn);color:#000;}
+.task .status.in_progress{background:var(--accent);color:#fff;}
+.task .status.completed{background:var(--accent2);color:#fff;}
+.task .status.failed{background:var(--danger);color:#fff;}
+.task .desc{font-size:12px;opacity:.7;margin:6px 0;}
+.task .agent{font-size:11px;opacity:.5;}
+.task .result{font-size:12px;background:var(--bg3);padding:10px;border-radius:6px;margin-top:8px;white-space:pre-wrap;max-height:200px;overflow:auto;}
+#right{width:360px;min-width:280px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#control{padding:14px;display:flex;flex-direction:column;gap:10px;}
+#control label{font-size:11px;opacity:.6;}
+#control input,#control textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--fg);padding:8px;font:inherit;outline:none;}
+#control textarea{min-height:80px;resize:vertical;}
+#control button{background:var(--accent);border:none;color:#fff;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;}
+#control button:hover{opacity:.9;}
+#control .row{display:flex;gap:8px;}
+#control .row button{flex:1;}
+#logs{flex:1;overflow:auto;padding:10px;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;background:var(--bg);}
+.log{padding:4px 0;border-bottom:1px solid var(--border);opacity:.8;}
+.log.start{color:var(--accent);}
+.log.complete{color:var(--accent2);}
+.log.error{color:var(--danger);}
+::-webkit-scrollbar{width:8px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+<header>
+<h1>🤖 Cascade Multi-Agent System <span class="badge">LIVE</span></h1>
+<span style="opacity:.5;font-size:12px">SSE Connected</span>
+</header>
+<main>
+<div id="left">
+<div class="panel-header">Stats</div>
+<div id="stats"></div>
+<div class="panel-header">Agents</div>
+<div id="agents-list"></div>
+</div>
+<div id="center">
+<div id="tasks-panel"></div>
+</div>
+<div id="right">
+<div class="panel-header">Control</div>
+<div id="control">
+<label>Task Title</label>
+<input id="task-title" placeholder="e.g. Refactor authentication">
+<label>Task Description</label>
+<textarea id="task-desc" placeholder="Describe what you want the agents to do..."></textarea>
+<button onclick="runTask()">Run Single Task</button>
+<div class="row">
+<button onclick="runPipeline()" style="background:var(--accent2)">Run Pipeline</button>
+<button onclick="clearTasks()" style="background:var(--bg3)">Clear</button>
+</div>
+</div>
+<div class="panel-header">Live Logs</div>
+<div id="logs"></div>
+</div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+let eventSource;
+
+function init() {
+  loadStats();
+  loadAgents();
+  loadTasks();
+  connectSSE();
+  setInterval(() => { loadStats(); loadAgents(); loadTasks(); }, 3000);
+}
+
+function connectSSE() {
+  eventSource = new EventSource("/api/events");
+  eventSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === "heartbeat") return;
+    log(`${data.type.toUpperCase()}: ${data.title || data.task_id || ""}`);
+    if (data.type === "complete" || data.type === "pipeline_complete") {
+      loadTasks();
+      loadStats();
+    }
+  };
+  eventSource.onerror = () => {
+    log("SSE reconnecting...", "error");
+    setTimeout(connectSSE, 2000);
+  };
+}
+
+async function loadStats() {
+  const res = await fetch("/api/stats");
+  const data = await res.json();
+  $("#stats").innerHTML = `
+    <div class="stat"><div class="value">${data.total_tasks}</div><div class="label">Tasks</div></div>
+    <div class="stat"><div class="value">${data.completed}</div><div class="label">Done</div></div>
+    <div class="stat"><div class="value">${data.failed}</div><div class="label">Failed</div></div>
+    <div class="stat"><div class="value">${data.total_agents}</div><div class="label">Agents</div></div>
+  `;
+}
+
+async function loadAgents() {
+  const res = await fetch("/api/agents");
+  const data = await res.json();
+  $("#agents-list").innerHTML = data.map((a) => `
+    <div class="agent-card">
+      <div class="avatar">${a.role === "coder" ? "💻" : a.role === "researcher" ? "🔍" : "👁"}</div>
+      <div class="info">
+        <div class="name">${a.name}</div>
+        <div class="role">${a.role} — ${a.model}</div>
+      </div>
+      <span class="status ${a.status}">${a.status}</span>
+    </div>
+  `).join("");
+}
+
+async function loadTasks() {
+  const res = await fetch("/api/tasks");
+  const data = await res.json();
+  $("#tasks-panel").innerHTML = data.map((t) => `
+    <div class="task">
+      <div class="header">
+        <span class="id">#${t.id}</span>
+        <span class="title">${t.title}</span>
+        <span class="status ${t.status}">${t.status}</span>
+      </div>
+      <div class="desc">${t.description || ""}</div>
+      <div class="agent">${t.assigned_to ? "Assigned: " + t.assigned_to : ""}</div>
+      ${t.result ? `<div class="result">${t.result}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+async function runTask() {
+  const title = $("#task-title").value.trim();
+  const desc = $("#task-desc").value.trim();
+  if (!title || !desc) return alert("Enter title and description");
+  log(`Running: ${title}`, "start");
+  const res = await fetch("/api/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, description: desc }),
+  });
+  const data = await res.json();
+  if (data.error) log(`Failed: ${data.error}`, "error");
+  else log(`Completed by ${data.agent}`, "complete");
+  loadTasks();
+  loadStats();
+}
+
+async function runPipeline() {
+  const title = $("#task-title").value.trim() || "Pipeline";
+  const desc = $("#task-desc").value.trim();
+  if (!desc) return alert("Enter description");
+  log(`Pipeline: ${title}`, "start");
+  const steps = [
+    { agent: "researcher", instruction: `Research: ${desc}` },
+    { agent: "coder", instruction: `Implement based on research: ${desc}` },
+    { agent: "reviewer", instruction: `Review the implementation: ${desc}` },
+  ];
+  const res = await fetch("/api/pipeline", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, steps }),
+  });
+  const data = await res.json();
+  log(`Pipeline done (${data.length} steps)`, "complete");
+  loadTasks();
+  loadStats();
+}
+
+function clearTasks() {
+  $("#tasks-panel").innerHTML = "";
+  $("#logs").innerHTML = "";
+}
+
+function log(msg, type = "") {
+  const div = document.createElement("div");
+  div.className = `log ${type}`;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  $("#logs").appendChild(div);
+  $("#logs").scrollTop = $("#logs").scrollHeight;
+}
+
+init();
+</script>
+</body>
+</html>
